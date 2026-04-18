@@ -25,16 +25,36 @@ function App() {
   };
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Mnemo Vault</h1>
-      {vaultPath() ? (
-        <div>
-          <p>Active Vault: <code>{vaultPath()}</code></p>
-          <button onClick={selectVault}>Change Folder</button>
+    <div class="flex h-screen w-full bg-brand-bg text-zinc-100 font-sans">
+      
+      {/* Sidebar: Categories */}
+      <aside class="w-64 bg-brand-sidebar border-r border-brand-border flex flex-col">
+        <div class="p-4 border-b border-brand-border">
+          <h1 class="font-bold text-lg tracking-tight">MNEMO</h1>
         </div>
-      ) : (
-        <p>Initializing...</p>
-      )}
+        <nav class="flex-1 overflow-y-auto p-2">
+           {/* We will map categories here */}
+           <div class="px-3 py-2 text-sm text-zinc-400">Categories</div>
+        </nav>
+        <div class="p-4 border-t border-brand-border">
+           <button class="w-full py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-xs transition-colors">
+             + New Category
+           </button>
+        </div>
+      </aside>
+
+      {/* Main Workspace */}
+      <main class="flex-1 flex flex-col">
+        <header class="h-14 border-b border-brand-border flex items-center px-6">
+          <span class="text-sm font-mono text-zinc-500">{vaultPath()}</span>
+        </header>
+        
+        <div class="flex-1 p-8">
+          <h2 class="text-2xl font-semibold mb-4 text-zinc-100">Welcome to your Vault</h2>
+          <p class="text-zinc-400">Select a category to start curating.</p>
+        </div>
+      </main>
+
     </div>
   );
 }
