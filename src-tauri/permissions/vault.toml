@@ -10,3 +10,9 @@ commands.allow = ["get_default_vault"]
 identifier = "allow-create-category"
 description = "Enables the create_category command"
 commands.allow = ["create_category"]
+
+# New permission for creating categories
+[[permission]]
+identifier = "allow-get-categories"
+description = "Enables the get_categories command"
+commands.allow = ["get_categories"]

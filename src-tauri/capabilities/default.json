@@ -8,6 +8,7 @@
     "opener:default",
     "dialog:default",
     "allow-get-default-vault" ,
-    "allow-create-category"
+    "allow-create-category",
+    "allow-get-categories"
   ]
 }

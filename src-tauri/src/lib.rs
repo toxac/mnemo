@@ -17,6 +17,27 @@ fn create_category(vault_path: String, category_name: String) -> Result<(), Stri
 }
 
 #[tauri::command]
+fn get_categories(vault_path: String) -> Result<Vec<String>, String> {
+    let path = PathBuf::from(&vault_path);
+    let mut categories = Vec::new();
+
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_dir() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    // Ignore the hidden .database folder
+                    if !name.starts_with('.') {
+                        categories.push(name);
+                    }
+                }
+            }
+        }
+    }
+    Ok(categories)
+}
+
+#[tauri::command]
 fn get_default_vault(app: tauri::AppHandle) -> Result<String, String> {
     // Finds /home/user/Documents/mnemo on Linux
     let doc_dir = app.path().document_dir()
@@ -39,7 +60,8 @@ pub fn run() {
         // Just one dot here!
         .invoke_handler(tauri::generate_handler![
             get_default_vault, 
-            create_category
+            create_category,
+            get_categories
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
