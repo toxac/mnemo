@@ -1,0 +1,12 @@
+# Define the permission for our custom command
+[[permission]]
+identifier = "allow-get-default-vault"
+description = "Enables the get_default_vault command for the frontend"
+commands.allow = ["get_default_vault"]
+
+
+# New permission for creating categories
+[[permission]]
+identifier = "allow-create-category"
+description = "Enables the create_category command"
+commands.allow = ["create_category"]
