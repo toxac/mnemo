@@ -1,5 +1,3 @@
-#![recursion_limit = "256"]
-
 use tauri::{AppHandle, Emitter, Manager, State};
 use notify::{Watcher, RecommendedWatcher, RecursiveMode, Config, Event, EventKind};
 use std::fs;
