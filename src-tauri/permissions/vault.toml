@@ -16,3 +16,9 @@ commands.allow = ["create_category"]
 identifier = "allow-get-categories"
 description = "Enables the get_categories command"
 commands.allow = ["get_categories"]
+
+
+[[permission]]
+identifier = "allow-get-files"
+description = "Allows reading files in a category"
+commands.allow = ["get_files"]

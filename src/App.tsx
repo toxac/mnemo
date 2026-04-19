@@ -1,13 +1,18 @@
-import { createSignal, onMount, For } from "solid-js";
+import { createSignal, onMount, For, createEffect } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 
 function App() {
   const [vaultPath, setVaultPath] = createSignal<string | null>(null);
   const [categories, setCategories] = createSignal<string[]>([]);
   const [selectedCategory, setSelectedCategory] = createSignal<string | null>(null);
+  
+  // Lists for the current selected category
+  const [notes, setNotes] = createSignal<string[]>([]);
+  const [attachments, setAttachments] = createSignal<string[]>([]);
 
-  // 1. Logic to fetch categories from Rust
+  // 1. Logic to fetch categories (folders) from Rust
   const refreshCategories = async (path: string) => {
     try {
       const list = await invoke<string[]>("get_categories", { vaultPath: path });
@@ -17,21 +22,68 @@ function App() {
     }
   };
 
+  // 2. Logic to fetch files within the selected category
+  const refreshFiles = async () => {
+    const cat = selectedCategory();
+    const path = vaultPath();
+    
+    if (!cat || !path) {
+      setNotes([]);
+      setAttachments([]);
+      return;
+    }
+
+    try {
+      // Fetch Markdown notes
+      const noteList = await invoke<string[]>("get_files", { 
+        vaultPath: path, 
+        category: cat, 
+        subfolder: "notes" 
+      });
+      setNotes(noteList);
+
+      // Fetch Binary attachments
+      const attachList = await invoke<string[]>("get_files", { 
+        vaultPath: path, 
+        category: cat, 
+        subfolder: "attachments" 
+      });
+      setAttachments(attachList);
+    } catch (err) {
+      console.error("Failed to fetch files:", err);
+    }
+  };
+
+  // 3. Lifecycle & Events
   onMount(async () => {
     try {
-      // 2. Initialize default vault
       const path = await invoke<string>("get_default_vault");
       setVaultPath(path);
       await refreshCategories(path);
+
+      // Watcher listener: refreshes both UI parts when disk changes
+      const unlisten = await listen("vault-changed", async () => {
+        console.log("Filesystem change detected.");
+        await refreshCategories(vaultPath()!);
+        await refreshFiles();
+      });
+
+      return () => unlisten();
     } catch (err) {
       console.error("Initialization error:", err);
     }
   });
 
+  // Reactive trigger: Refresh files whenever the category changes
+  createEffect(() => {
+    refreshFiles();
+  });
+
+  // 4. Actions
   const handleCreateCategory = async () => {
     const name = prompt("Enter category name:");
     if (name && vaultPath()) {
-      await invoke("create_category", { vaultPath: vaultPath(), categoryName: name });
+      await invoke("create_category", { vaultPath: vaultPath()!, categoryName: name });
       await refreshCategories(vaultPath()!);
     }
   };
@@ -44,15 +96,16 @@ function App() {
     });
     if (selected) {
       setVaultPath(selected as string);
+      setSelectedCategory(null);
       await refreshCategories(selected as string);
     }
   };
 
   return (
-    <div class="flex h-screen w-full bg-brand-bg text-zinc-100 font-sans">
+    <div class="flex h-screen w-full bg-brand-bg text-zinc-100 font-sans overflow-hidden">
       
       {/* Sidebar */}
-      <aside class="w-64 bg-brand-sidebar border-r border-brand-border flex flex-col">
+      <aside class="w-64 bg-brand-sidebar border-r border-brand-border flex flex-col shrink-0">
         <div class="p-4 border-b border-brand-border flex flex-col gap-1">
           <h1 class="font-bold text-lg tracking-tighter">MNEMO</h1>
           <span class="text-[10px] text-zinc-500 font-mono truncate">{vaultPath()}</span>
@@ -96,10 +149,10 @@ function App() {
       </aside>
 
       {/* Main Workspace */}
-      <main class="flex-1 flex flex-col">
+      <main class="flex-1 flex flex-col min-w-0">
         <header class="h-14 border-b border-brand-border flex items-center px-6 bg-brand-bg/50 backdrop-blur-md">
-          <h2 class="text-sm font-medium text-zinc-300">
-            {selectedCategory() || "Overview"}
+          <h2 class="text-sm font-medium text-zinc-300 uppercase tracking-wider">
+            {selectedCategory() || "Vault Overview"}
           </h2>
         </header>
         
@@ -112,8 +165,46 @@ function App() {
               </p>
             </div>
           ) : (
-            <div>
-              <p class="text-zinc-500 text-sm">Content for {selectedCategory()} will appear here.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              
+              {/* Notes Column */}
+              <section>
+                <h3 class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4">Knowledge (Notes)</h3>
+                <div class="space-y-2">
+                  <For each={notes()}>
+                    {(file) => (
+                      <div class="group p-3 bg-zinc-900 border border-brand-border rounded hover:border-zinc-500 cursor-pointer transition-all">
+                        <span class="text-sm text-zinc-200 group-hover:text-white">{file}</span>
+                      </div>
+                    )}
+                  </For>
+                  {notes().length === 0 && (
+                    <div class="py-8 border-2 border-dashed border-brand-border rounded flex items-center justify-center">
+                      <p class="text-zinc-600 text-xs italic">No curated notes yet.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Attachments Column */}
+              <section>
+                <h3 class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4">Source Data (Attachments)</h3>
+                <div class="space-y-2">
+                  <For each={attachments()}>
+                    {(file) => (
+                      <div class="group p-3 bg-zinc-900/30 border border-brand-border rounded hover:bg-zinc-900 transition-all cursor-help">
+                        <span class="text-sm text-zinc-400 group-hover:text-zinc-200">{file}</span>
+                      </div>
+                    )}
+                  </For>
+                  {attachments().length === 0 && (
+                    <div class="py-8 border-2 border-dashed border-brand-border rounded flex items-center justify-center">
+                      <p class="text-zinc-600 text-xs italic">No raw attachments found.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
             </div>
           )}
         </div>

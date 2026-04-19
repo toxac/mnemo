@@ -9,6 +9,9 @@
     "dialog:default",
     "allow-get-default-vault" ,
     "allow-create-category",
-    "allow-get-categories"
+    "allow-get-categories",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
+    "allow-get-files"
   ]
 }
